@@ -153,33 +153,34 @@ def gradientboosting(x_train, y_train, x_val, y_val, n_trials=100):
     return study.best_params
 
 
-# Usage example
-if __name__ == "__main__":
-    # Assuming you have x_train, y_train, x_val, y_val already split
-    import pandas as pd
+# # Usage example
+# if __name__ == "__main__":
+#     # Assuming you have x_train, y_train, x_val, y_val already split
+#     import pandas as pd
 
 
-    df = pd.read_excel(r"C:\Users\Abhishek sharma\Artificial Intelligence\Datasets\Influenza_surveillance_Data.xlsx")
-    from sklearn.model_selection import train_test_split
-    x = df.iloc[:,1:]
-    y = df.iloc[:,0]
-    x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=0.2, random_state=42)
-    # Optimize all models
-    rf_params = randomforest(x_train, y_train, x_val, y_val, n_trials=50)
-    ada_params = adaboost(x_train, y_train, x_val, y_val, n_trials=50)
-    cat_params = catboost(x_train, y_train, x_val, y_val, n_trials=50)
-    xgb_params = xgboost(x_train, y_train, x_val, y_val, n_trials=50)
-    lgb_params = lightgbm(x_train, y_train, x_val, y_val, n_trials=50)
-    gb_params = gradientboosting(x_train, y_train, x_val, y_val, n_trials=50)
-    # Store all best parameters
-    all_params = {
-        'RandomForest': rf_params,
-        'AdaBoost': ada_params,
-        'CatBoost': cat_params,
-        'XGBoost': xgb_params,
-        'LightGBM': lgb_params,
-        'GradientBoosting': gb_params
-    }
-    print("\n=== All Best Parameters ===")
-    for model_name, params in all_params.items():
-        print(f"{model_name}: {params}")
+#     df = pd.read_excel(r"C:\Users\Abhishek sharma\Artificial Intelligence\Datasets\Influenza_surveillance_Data.xlsx")
+#     from sklearn.model_selection import train_test_split
+#     x = df.iloc[:,1:]
+#     y = df.iloc[:,0]
+#     x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=0.2, random_state=42)
+#     # Optimize all models
+#     rf_params = randomforest(x_train, y_train, x_val, y_val, n_trials=50)
+#     ada_params = adaboost(x_train, y_train, x_val, y_val, n_trials=50)
+#     cat_params = catboost(x_train, y_train, x_val, y_val, n_trials=50)
+#     xgb_params = xgboost(x_train, y_train, x_val, y_val, n_trials=50)
+#     lgb_params = lightgbm(x_train, y_train, x_val, y_val, n_trials=50)
+#     gb_params = gradientboosting(x_train, y_train, x_val, y_val, n_trials=50)
+#     # Store all best parameters
+#     all_params = {
+#         'RandomForest': rf_params,
+#         'AdaBoost': ada_params,
+#         'CatBoost': cat_params,
+#         'XGBoost': xgb_params,
+#         'LightGBM': lgb_params,
+#         'GradientBoosting': gb_params
+#     }
+#     print("\n=== All Best Parameters ===")
+#     for model_name, params in all_params.items():
+#         print(f"{model_name}: {params}")
+
