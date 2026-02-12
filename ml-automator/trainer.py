@@ -109,7 +109,7 @@ class Trainer:
             print(f"\nFinal Comparison Table saved at: {file_path}")
         return comparison_df
 
-    def auc_curve_saver(self, models, test_size = 0.3 , random_state=42 , filename="roc_auc_model_comparisons.png"):
+    def auc_curve_saver(self, models, test_size = 0.3 , random_state=42 ,save_file = True  , filename="roc_auc_model_comparisons.png"):
         X_train , X_test , y_train , y_test = train_test_split(self.x , self.y , test_size=test_size , random_state=random_state , stratify=self.y)
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -138,15 +138,17 @@ class Trainer:
             yaxis_title='True Positive Rate',
             template='plotly_white'
         )
-        file_path = f"results/{filename}"
+        
+     
+        if save_file:
+            file_path = f"results/{filename}"
+            if not os.path.exists('results'):
+                os.makedirs('results')
+                fig.write_image(file_path)
+                print(f"✅ Success: Graph saved at {file_path}")
         fig.show()
-        if not os.path.exists('results'):
-            os.makedirs('results')
 
-        fig.write_image(file_path)
-        print(f"✅ Success: Graph saved at {file_path}")
-
-    def caliberation_curve(self, models, test_size = 0.3 , random_state=42 , filename="caliberation_model_comparisons.png"):
+    def caliberation_curve(self, models, test_size = 0.3 , random_state=42 , save_file=True , filename="caliberation_model_comparisons.png"):
         X_train , X_test , y_train , y_test = train_test_split(self.x , self.y , test_size=test_size , random_state=random_state , stratify=self.y)
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -173,15 +175,16 @@ class Trainer:
             yaxis_title='True Probability',
             template='plotly_white'
             )
+        if save_file:
+            file_path = f"results/{filename}"
+            if not os.path.exists('results'):
+                os.makedirs('results')
+    
+                fig.write_image(file_path)
+                print(f"Success: Graph saved at {file_path}")
         fig.show()
-        file_path = f"results/{filename}"
-        if not os.path.exists('results'):
-            os.makedirs('results')
 
-            fig.write_image(file_path)
-            print(f"Success: Graph saved at {file_path}")
-
-    def learning_curve(self, models, test_size = 0.3 , random_state=42 , filename="learning_curve.png"):
+    def learning_curve(self, models, test_size = 0.3 , random_state=42 , save_file=True , filename="learning_curve.png"):
         fig = go.Figure()
         train_sizes = np.linspace(0.1, 1.0, 5)
 
@@ -210,12 +213,13 @@ class Trainer:
             width=900,
             height=600
         )
+        if save_file:
+            if not os.path.exists('reports'):
+                os.makedirs('reports')
+            file_path = f"reports/{filename}"
+            fig.write_image(file_path)
+            print(f"Multi-Model Learning Curve saved at: {file_path}")
         fig.show()
-        if not os.path.exists('reports'):
-            os.makedirs('reports')
-        file_path = f"reports/{filename}"
-        fig.write_image(file_path)
-        print(f"Multi-Model Learning Curve saved at: {file_path}")
 
 
 
@@ -254,4 +258,5 @@ class Trainer:
 
     # frame = train.score_comparison(models=models)
     # print(frame)
+
 
