@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="ml-automater",  # PyPI par 'automater' shayad taken ho
+    name="ml_automater",  # PyPI par 'automater' shayad taken ho
     version="0.1.0",
     author="Abhishek Sharma",
     description="An all-in-one automated ML pipeline for feature engineering, optimization, and evaluation.",
@@ -29,4 +29,5 @@ setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.8',
+
 )
