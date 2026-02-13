@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="automac",  # PyPI par 'automater' shayad taken ho
-    version="0.1.0",
+    version="0.1.1",
     author="Abhishek Sharma",
     description="An all-in-one automated ML pipeline for feature engineering, optimization, and evaluation.",
     long_description=open("README.md").read(),
@@ -31,4 +31,5 @@ setup(
     python_requires='>=3.8',
 
 )
+
 
