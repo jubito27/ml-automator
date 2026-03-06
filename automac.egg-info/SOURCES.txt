@@ -1,0 +1,11 @@
+README.md
+setup.py
+automac/__init__.py
+automac/analyser.py
+automac/autotune.py
+automac/feature_engineering.py
+automac.egg-info/PKG-INFO
+automac.egg-info/SOURCES.txt
+automac.egg-info/dependency_links.txt
+automac.egg-info/requires.txt
+automac.egg-info/top_level.txt

@@ -1,0 +1,11 @@
+pandas
+numpy
+scikit-learn
+category_encoders
+optuna
+catboost
+xgboost
+lightgbm
+plotly
+kaleido
+openpyxl
