@@ -1,21 +1,50 @@
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import  cross_validate
-import numpy as np
-import plotly.graph_objects as go
-from sklearn.metrics import roc_curve, roc_auc_score
-from sklearn.calibration import calibration_curve
-import pandas as pd
-from sklearn.metrics import classification_report , log_loss
-from sklearn.model_selection import learning_curve
-from sklearn.model_selection import StratifiedKFold
 import os
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from sklearn.model_selection import (
+    train_test_split, cross_validate, learning_curve, validation_curve
+)
+from sklearn.metrics import (
+    roc_curve, roc_auc_score,
+    classification_report, log_loss, mean_squared_error, r2_score , mean_absolute_error
+)
 
-class Analyser:
-    def __init__(self , x , y):
+from sklearn.calibration import calibration_curve
+
+class BaseAnalyser:
+    """Base class containing shared utilities for analysis."""
+    def __init__(self, x, y):
         self.x = x
         self.y = y
 
-    def cross_validator(self , model, cv=10):
+    def _create_dir(self, directory):
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+    def _ensure_dir(self, directory):
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+class ClassificationAnalyser(BaseAnalyser):
+    """
+    A toolset for evaluating and comparing classification models.
+    This class provides methods to calculate cross-validation scores, 
+    generate ROC curves, learning curves, and calibration plots using Plotly.
+    """
+
+    def cross_validator(self, model, cv=10):
+        """
+        Perform k-fold cross-validation with multiple classification metrics.
+
+        Args:
+            model: The scikit-learn compatible classifier instance.
+            cv (int): Number of cross-validation folds. Defaults to 10.
+
+        Returns:
+            pd.DataFrame: Mean scores for accuracy, precision, recall, F1, and ROC-AUC.
+        """
         scoring_metrics = {
             'acc': 'accuracy',
             'bal_acc': 'balanced_accuracy',
@@ -26,58 +55,66 @@ class Analyser:
             'roc_auc': 'roc_auc'
         }
         scores = cross_validate(
-            model,
-            self.x,
-            self.y,
-            cv=cv,
-            scoring=scoring_metrics,
-            n_jobs=1,  # Force single process
-            error_score='raise' # Isse pata chalega asli error kya hai
+            model, self.x, self.y, cv=cv,
+            scoring=scoring_metrics, n_jobs=-1, error_score='raise'
         )
-        df_results = pd.DataFrame(scores)
-        df = pd.DataFrame(df_results.mean())
-        return df
+        return pd.DataFrame(pd.DataFrame(scores).mean(), columns=['Mean Score'])
 
-    def model_scores(self , model , test_size = 0.3 , random_state=42 , cv=10):
-        x_train , x_text , y_train , y_test = train_test_split(self.x , self.y , test_size=test_size , random_state=random_state , stratify=self.y)
-        model.fit(x_train , y_train)
-        y_pred = model.predict(x_text)
-        #scorings
-        train_score = model.score(x_train , y_train)
-        text_score = model.score(x_text , y_test)
-        log_loss_ = log_loss(y_test , y_pred)
-        c_v = self.cross_validator(model , cv=10)
-        return c_v , train_score , text_score , log_loss_
+    def score_comparison(self, models, test_size=0.3, random_state=42, filename="score_data.csv", save_file=False):
+        """
+        Compare multiple classifiers on various metrics and save to CSV.
 
-    def score_comparison(self , models , test_size = 0.3 , random_state=42 , filename="score_data.csv" , save_file=True):
+        Args:
+            models (list): List of classifier instances.
+            test_size (float): Proportion of test data.
+            random_state (int): Seed for reproducibility.
+            filename (str): Path to save the CSV.
+            save_file (bool): Whether to save the result.
+
+        Returns:
+            pd.DataFrame: Comparison table of all models.
+        """
         rows = []
+        x_train, x_test, y_train, y_test = train_test_split(
+            self.x, self.y, test_size=test_size, random_state=random_state, stratify=self.y
+        )
+
         for model in models:
-            c_v, train_score_, text_score_, log_loss_ = self.model_scores(model, test_size=test_size, random_state=random_state , stratify=self.y)
+            model.fit(x_train, y_train)
+            y_pred = model.predict(x_test)
+            cv_results = self.cross_validator(model)
             row = {
-                'Model Name': type(model).__name__,
-                'fit_time': c_v.loc['fit_time'][0],
-                'train_score': train_score_,
-                'test_score': text_score_,
-                'accuracy': c_v.loc['test_acc'][0],
-                'precision_macro': c_v.loc['test_prec_macro'][0],
-                'recall_macro': c_v.loc['test_rec_macro'][0],
-                'f1_macro': c_v.loc['test_f1_macro'][0],
-                'f1_weighted': c_v.loc['test_f1_weighted'][0],
-                'roc_auc': c_v.loc['test_roc_auc'][0], # Fixed
-                'log_loss': log_loss_
+                'Model Names': type(model).__name__,
+                'Accuracy': cv_results.loc['test_acc'][0],
+                'F1_Macro': cv_results.loc['test_f1_macro'][0],
+                'ROC_AUC': cv_results.loc['test_roc_auc'][0],
+                'Log_Loss': log_loss(y_test, model.predict_proba(x_test))
             }
             rows.append(row)
-        df = pd.DataFrame(rows)
+        df = pd.DataFrame(rows).set_index('Model Names')
         if save_file:
-            if not os.path.exists('reports'):
-                os.makedirs('reports')
-            file_path = f"reports/{filename}"
-            df.to_csv(file_path)
-            print(f"\nModel Comparison score Data saved at: {file_path}")
+            self._ensure_dir('reports')
+            try:
+                file_path = f"reports/{filename}"
+                df.to_csv(file_path)
+                print(f"✅ Success: Report saved at {file_path}")
+            except PermissionError:
+                print(f"❌ Error: Please close '{filename}' if it is open in Excel and try again.")
         return df
 
 
-    def classification_report_comparison(self, models, filename="classification_report.csv" , save_file=True):
+    def classification_report_comparison(self, models, filename="classification_report.csv" , save_file=False):
+        """
+        Analyse and save Classification Report comparison.
+
+        Args:
+            models (list): List of fitted or unfitted classifiers.
+            save_file (bool): Save the plot as an image.
+            filename (str): Path for the image file.
+
+        Returns:
+            A .csv file having a comparison of classification report of different models
+        """
         X_train, X_test, y_train, y_test = train_test_split(
             self.x, self.y, test_size=0.3,
             random_state=42, stratify=self.y
@@ -90,7 +127,7 @@ class Analyser:
             y_pred = model.predict(X_test)
             report = classification_report(y_test, y_pred, output_dict=True)
             model_row = {
-                'Model Name': model_name,
+                'Model Names': model_name,
                 'Accuracy': report['accuracy'],
                 'Precision (Macro)': report['macro avg']['precision'],
                 'Recall (Macro)': report['macro avg']['recall'],
@@ -100,16 +137,28 @@ class Analyser:
 
             all_model_data.append(model_row)
             print(f"✅ Evaluated: {model_name}")
-        comparison_df = pd.DataFrame(all_model_data)
+        comparison_df = pd.DataFrame(all_model_data).set_index('Model Names')
         if save_file:
-            if not os.path.exists('reports'):
-                os.makedirs('reports')
-            file_path = f"reports/{filename}"
-            comparison_df.to_csv(file_path)
-            print(f"\nFinal Comparison Table saved at: {file_path}")
+            self._ensure_dir('reports')
+            try:
+                file_path = f"reports/{filename}"
+                comparison_df.to_csv(file_path)
+                print(f"✅ Success: Report saved at {file_path}")
+            except PermissionError:
+                print(f"❌ Error: Please close '{filename}' if it is open in Excel and try again.")
+            except Exception as e:
+                print(f"{e}")
         return comparison_df
 
     def auc_curve_saver(self, models, test_size = 0.3 , random_state=42 , save_file = False , filename="roc_auc_model_comparisons.png"):
+        """
+        Plot and optionally save ROC-AUC curve comparison.
+
+        Args:
+            models (list): List of fitted or unfitted classifiers.
+            save_file (bool): Save the plot as an image.
+            filename (str): Path for the image file.
+        """
         X_train , X_test , y_train , y_test = train_test_split(self.x , self.y , test_size=test_size , random_state=random_state , stratify=self.y)
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -138,16 +187,25 @@ class Analyser:
             yaxis_title='True Positive Rate',
             template='plotly_white'
         )
-        file_path = f"results/{filename}"
         if save_file:
-            if not os.path.exists('results'):
-                os.makedirs('results')
-
-            fig.write_image(file_path)
-            print(f"✅ Success: Graph saved at {file_path}")
+            self._ensure_dir('reports')
+            try:
+                file_path = f"reports/{filename}"
+                fig.write_image(file_path)
+                print(f"✅ Success: Graph saved at {file_path}")
+            except PermissionError:
+                print(f"❌ Error: Please close '{filename}' if it is open in Excel and try again.")
         fig.show()
 
     def caliberation_curve(self, models, test_size = 0.3 , random_state=42 , save_file = False, filename="caliberation_model_comparisons.png"):
+        """
+        Plot and optionally save Caliberation curve comparison.
+
+        Args:
+            models (list): List of fitted or unfitted classifiers.
+            save_file (bool): Save the plot as an image.
+            filename (str): Path for the image file.
+        """
         X_train , X_test , y_train , y_test = train_test_split(self.x , self.y , test_size=test_size , random_state=random_state , stratify=self.y)
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -174,25 +232,40 @@ class Analyser:
             yaxis_title='True Probability',
             template='plotly_white'
             )
-        if save_file:
-            file_path = f"results/{filename}"
-            if not os.path.exists('results'):
-                os.makedirs('results')
 
+        if save_file:
+            self._ensure_dir('reports')
+            try:
+                file_path = f"reports/{filename}"
                 fig.write_image(file_path)
-                print(f"Success: Graph saved at {file_path}")
+                print(f"✅ Success: Graph saved at {file_path}")
+            except PermissionError:
+                print(f"❌ Error: Please close '{filename}' if it is open in Excel and try again.")
+            except Exception as e:
+                print(f"{e}")
         fig.show()
 
-    def learning_curve(self, models, test_size = 0.3 , random_state=42 , save_file = False , filename="learning_curve.png"):
+
+    def learning_curve_saver(self, models, test_size=0.3, random_state=42,cv = 5 , save_file=False, filename="learning_curve.png", train_set=True):
+        """
+        Plot and optionally save Learning curve comparison.
+        """
         fig = go.Figure()
         train_sizes = np.linspace(0.1, 1.0, 5)
 
+        # FIX: Correct sequence is X_train, X_test, y_train, y_test
+        x_train, x_test, y_train, y_test = train_test_split(
+            self.x, self.y, test_size=test_size, random_state=random_state, stratify=self.y
+        )
+
         for model in models:
             model_name = type(model).__name__
+            # Choose which data to use for learning curve cross-validation
+            data_x, data_y = (x_train, y_train) if train_set else (x_test, y_test)
             train_sizes_abs, train_scores, test_scores = learning_curve(
-                model, self.x, self.y,
+                model, data_x, data_y,
                 train_sizes=train_sizes,
-                cv=5,
+                cv=cv,
                 scoring='accuracy',
                 n_jobs=-1
             )
@@ -204,57 +277,178 @@ class Analyser:
                 mode='lines+markers',
                 name=f'{model_name}'
             ))
+
         fig.update_layout(
-            title='Learning Curves Comparison (Validation Scores)',
-            xaxis_title='Number of Training Samples',
+            title=f"Learning Curves Comparison ({'Training' if train_set else 'Test'} Set)",
+            xaxis_title='Number of Samples',
             yaxis_title='Accuracy Score',
             template='plotly_white',
             width=900,
             height=600
         )
+
         if save_file:
-            if not os.path.exists('reports'):
-                os.makedirs('reports')
-            file_path = f"reports/{filename}"
-            fig.write_image(file_path)
-            print(f"Multi-Model Learning Curve saved at: {file_path}")
+            self._ensure_dir('reports')
+            try:
+                file_path = f"reports/{filename}"
+                fig.write_image(file_path)
+                print(f"✅ Success: Learning Curve saved at reports/{file_path}")
+            except PermissionError:
+                print(f"❌ Error: Please close '{filename}' if it is open in Excel and try again.")
+            except Exception as e:
+                print(f"{e}")
+        fig.show()
+
+    def validation_curve_plotter(self, model, param_name, param_range, cv=5, save_file=False, filename="val_curve.png"):
+        """
+        Plots the validation curve for a specific hyperparameter to analyze Bias-Variance tradeoff.
+
+        Args:
+            model: The classifier instance (e.g., RandomForestClassifier()).
+            param_name (str): Name of the hyperparameter to vary (e.g., 'max_depth').
+            param_range (list or np.array): The values of the parameter to test.
+            cv (int): Number of cross-validation folds. Defaults to 5.
+            save_file (bool): Whether to save the plot as an image.
+            filename (str): Name of the file to save.
+        """
+        print(f"📊 Calculating Validation Curve for {param_name}...")
+        # Validation curve calculate karna
+        train_scores, test_scores = validation_curve(
+            model, self.x, self.y, 
+            param_name=param_name, 
+            param_range=param_range,
+            cv=cv, 
+            scoring="accuracy", 
+            n_jobs=-1
+        )
+
+        # Mean aur Standard Deviation nikalna
+        train_mean = np.mean(train_scores, axis=1)
+        train_std = np.std(train_scores, axis=1)
+        test_mean = np.mean(test_scores, axis=1)
+        test_std = np.std(test_scores, axis=1)
+
+        fig = go.Figure()
+
+        # Training Score Trace
+        fig.add_trace(go.Scatter(
+            x=param_range, y=train_mean,
+            mode='lines+markers',
+            name='Training Score',
+            line=dict(color='blue')
+        ))
+
+        # Cross-Validation Score Trace
+        fig.add_trace(go.Scatter(
+            x=param_range, y=test_mean,
+            mode='lines+markers',
+            name='Cross-Validation Score',
+            line=dict(color='green')
+        ))
+
+        fig.update_layout(
+            title=f'Validation Curve for {type(model).__name__} ({param_name})',
+            xaxis_title=f'Parameter: {param_name}',
+            yaxis_title='Accuracy Score',
+            template='plotly_white',
+            hovermode='x unified'
+        )
+
+        if save_file:
+            self._ensure_dir('reports')
+            try:
+                file_path = f"reports/{filename}"
+                fig.write_image(file_path)
+                print(f"✅ Validation Curve saved at: results/{filename}")
+            except PermissionError:
+                print(f"❌ Error: Please close '{filename}' if it is open in Excel and try again.")
+            except Exception as e:
+                print(f"{e}")
+
+
+        fig.show()
+
+class RegressionAnalyser(BaseAnalyser):
+    """
+    Dedicated toolset for Regression tasks.
+    Includes Error analysis, Residual plots, and Prediction vs Actual comparisons.
+    """
+
+    def regression_metrics(self, model, test_size=0.3, random_state=42):
+        """
+        Calculate standard regression metrics (MSE, RMSE, MAE, R2).
+
+        Args:
+            model: Scikit-learn regressor.
+            test_size (float): Test split ratio.
+            random_state (int): Seed value.
+
+        Returns:
+            dict: Dictionary of calculated metrics.
+        """
+        x_train, x_test, y_train, y_test = train_test_split(self.x, self.y, test_size=test_size, random_state=random_state)
+        model.fit(x_train, y_train)
+        y_pred = model.predict(x_test)
+        return {
+            'MSE': mean_squared_error(y_test, y_pred),
+            'RMSE': np.sqrt(mean_squared_error(y_test, y_pred)),
+            'MAE': mean_absolute_error(y_test, y_pred),
+            'R2': r2_score(y_test, y_pred)
+        }
+
+    def plot_regression_results(self, model, save_file=False, filename="results/regression_analysis.png"):
+        """
+        Generate two key regression plots: Prediction vs Actual and Residual Plot.
+
+        Args:
+            model: Regressor instance.
+            save_file (bool): Save image if True.
+            filename (str): Output path.
+        """
+        x_train, x_test, y_train, y_test = train_test_split(self.x, self.y, test_size=0.3)
+        model.fit(x_train, y_train)
+        y_pred = model.predict(x_test)
+        residuals = y_test - y_pred
+
+        fig = make_subplots(rows=1, cols=2, subplot_titles=("Actual vs Predicted", "Residual Plot"))
+
+        # Plot 1: Actual vs Predicted
+        fig.add_trace(go.Scatter(x=y_test, y=y_pred, mode='markers', name='Predictions'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=[y_test.min(), y_test.max()], y=[y_test.min(), y_test.max()], name='Perfect Fit', line=dict(color='red')), row=1, col=1)
+
+        # Plot 2: Residuals
+        fig.add_trace(go.Scatter(x=y_pred, y=residuals, mode='markers', name='Residuals'), row=1, col=2)
+        fig.add_hline(y=0, line_dash="dash", line_color="black", row=1, col=2)
+
+        fig.update_layout(height=500, title_text=f"Analysis: {type(model).__name__}", template="plotly_white")
+        if save_file:
+            self._ensure_dir(filename)
+            fig.write_image(filename)
         fig.show()
 
 
 
-# if __name__ == "__main__":
-#     df = pd.read_excel(r"C:\Users\Abhishek sharma\Artificial Intelligence\Datasets\Influenza_surveillance_Data.xlsx")
+    def validation_curve_plotter(self, model, param_name, param_range, cv=5, scoring="r2", save_file=False, filename="results/val_curve.png"):
+        """
+        Plot Validation Curve to analyze bias-variance tradeoff for a parameter.
 
-#     x = df.iloc[:,1:]
-#     y = df.iloc[:,0]
-#     x_train , x_test , y_train , y_test = train_test_split(x , y , test_size=0.3 , random_state=42 , stratify=y)
+        Args:
+            model: Regressor or Classifier.
+            param_name (str): Parameter to tune.
+            param_range (list): Values to test.
+            scoring (str): Metric to use (e.g., 'r2' or 'neg_mean_squared_error').
+        """
+        train_scores, test_scores = validation_curve(
+            model, self.x, self.y, param_name=param_name, param_range=param_range,
+            cv=cv, scoring=scoring, n_jobs=-1
+        )
 
-#     import models_optimizer as optuna
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=param_range, y=np.mean(train_scores, axis=1), name="Train Score"))
+        fig.add_trace(go.Scatter(x=param_range, y=np.mean(test_scores, axis=1), name="Cross-Val Score"))
 
-#     rf = optuna.randomforest(x_train=x_train , y_train=y_train , x_val=x_test , y_val=y_test)
-
-#     ab = optuna.adaboost(x_train=x_train , y_train=y_train , x_val=x_test , y_val=y_test)
-
-#     cb = optuna.catboost(x_train=x_train , y_train=y_train , x_val=x_test , y_val=y_test)
-
-#     xb = optuna.xgboost(x_train=x_train , y_train=y_train , x_val=x_test , y_val=y_test)
-
-#     import lightgbm as lgb
-#     _orig_lgbm_fit = lgb.LGBMClassifier.fit
-#     def _lgbm_fit_no_verbose(self, X, y, *args, **kwargs):
-#         kwargs.pop('verbose', None)
-#         return _orig_lgbm_fit(self, X, y, *args, **kwargs)
-#     lgb.LGBMClassifier.fit = _lgbm_fit_no_verbose
-
-    # lg = optuna.lightgbm(x_train=x_train, y_train=y_train, x_val=x_test, y_val=y_test)
-
-    # from catboost import CatBoostClassifier
-    # import xgboost as xgb
-    # import lightgbm as lgb
-    # from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
-    # models = [RandomForestClassifier(**rf) , AdaBoostClassifier(**ab) , CatBoostClassifier(**cb) , xgb.XGBClassifier(**xb) , lgb.LGBMClassifier(**lg)]
-    # train = Trainer(x=x , y=y)
-
-    # frame = train.score_comparison(models=models)
-    # print(frame)
-
+        fig.update_layout(title=f"Validation Curve ({param_name})", xaxis_title=param_name, yaxis_title=scoring)
+        if save_file:
+            self._ensure_dir(filename)
+            fig.write_image(filename)
+        fig.show()

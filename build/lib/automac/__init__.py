@@ -2,14 +2,19 @@
 __version__ = "0.1.1"
 
 # Module se classes aur functions ko expose karna
-from .feature_engineering import FeatureImportance , FeatureEngineering
-from .autotune import AutoTune
-from .analyser import Analyser
+from .feature_engineering import FeatureImportance , FeatureEngineering , AdvancedFeatureEngineering
+from .autotune import ClassificationTuner , RegressionTuner
+from .analyser import ClassificationAnalyser , RegressionAnalyser
+from .text import transform
 
 # Ye define karta hai ki 'from automater import *' karne par kya kya aayega
 __all__ = [
     'FeatureImportance',
     'FeatureEngineering',
-    'Analyser',
-    'AutoTune'
+    'AdvancedFeatureEngineering',
+    'RegressionAnalyser',
+    'ClassificationAnalyser',
+    'RegressionTuner',
+    'ClassificationTuner',
+    'transform'
 ]

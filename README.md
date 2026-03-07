@@ -1,30 +1,45 @@
-# ML-Automator 🚀
+# 📦 Automac: High-Performance Automated ML Pipeline
 
-**ML-Automator** is a powerful, low-code machine learning utility library that automates Feature Engineering, Hyperparameter Optimization, and Model Evaluation.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/jubito-27/ml-automator/pulls)
 
+**Automac** ek end-to-end Automated Machine Learning (AutoML) library hai jo data preprocessing se lekar model optimization tak ka saara heavy lifting khud karti hai. Isme advanced techniques jaise **Boruta Feature Selection** aur **Optuna-based Parallel Tuning** integrated hain.
 
-## 🌟 Features
+---
 
-- **Automated Feature Engineering**: Handle Target Encoding, Scaling, and Imputation in one line.
-- **Optuna-Powered Optimization**: Pre-configured search spaces for RandomForest, XGBoost, CatBoost, LightGBM, and more.
-- **Deep Evaluation**:
-    - Multi-model score comparison.
-    - Interactive ROC and Calibration curves using Plotly.
-    - Automated Learning Curve analysis.
-    - Automatic report generation (CSV/Excel/PNG).
+## 🚀 Key Modules & Features
 
-## 📂 Project Structure
-Your library is organized into three core modules:
-1. `feature_engineering.py`: Data preprocessing and importance extraction.
-2. `models_optimizer.py`: Optuna-based hyperparameter tuning.
-3. `trainer.py`: Model training, cross-validation, and visualization.
+### 1. 🛡️ Advanced Feature Engineering
+Sirf scaling nahi, balki statistically solid feature selection.
+* **Boruta Selection:** Shadow features ke saath compete karke irrelevant noise ko hatana.
+* **Smart Handling:** Automatic outlier clipping (IQR) aur multicollinearity removal.
+* **Encoding:** High-cardinality data ke liye advanced Target Encoding.
 
-## 🚀 Quick Start
+### 2. ⚡ Automated Model Tuning
+Parallel execution jo aapke CPU ke har core ka sahi istemaal karti hai.
+* **Optuna Integration:** Hyperparameter optimization ka gold standard.
+* **Smart Allocation:** Cores ko models ke beech distribute karna taaki Windows/Linux dono par maximum speed mile.
+* **Supported Models:** XGBoost, LightGBM, CatBoost, RandomForest, SVM, KNN, etc.
 
-### 1. Automation at its Best
-```python
-from automater.feature_engineering import FeatureEvaluation
-from sklearn.ensemble import RandomForestClassifier
+### 3. 📝 Text Preprocessing (NLP)
+Raw text data ko cleaning aur normalization ke liye ready karna.
+* Stopword removal, regex-based tokenization, aur Porter Stemming.
 
-evaluator = FeatureEvaluation(X, y)
-processed_x, importance_df = evaluator.fit_all_at_once(RandomForestClassifier())
+### 4. 📊 Diagnostics & Visualization
+Model ko "Black Box" banne se rokna.
+* **Learning Curves:** Training vs Validation lines se Overfitting detect karna.
+
+---
+
+## 🛠️ Installation
+
+```bash
+# Clone the repository
+git clone [https://github.com/jubito-27/ml-automator.git](https://github.com/jubito-27/ml-automator.git)
+cd ml-automator
+
+# Install in editable mode
+pip install -e .
+```
+
